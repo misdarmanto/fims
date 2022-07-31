@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Dialog from "@mui/material/Dialog";
@@ -31,12 +31,14 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
   const [deviceName, setDeviceName] = useState("");
   const [macAddress, setMacAddress] = useState("");
 
-  const [deviceProperTies, setDeviceProperties] = useState([Date.now()]);
-
   const [sendDataInterval, setSendDataInterval] = useState(0);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
 
   const [isError, setIsError] = useState({ error: false, message: "" });
+
+  const [deviceProperties, setDeviceProperties] = useState([
+    { ID: Date.now(), modularIO: "", IOType: "", sensorType: "" },
+  ]);
 
   const handleSubmit = () => {
     const oldDevices = allDevice;
@@ -60,27 +62,39 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
       return;
     }
 
+    deviceProperties.forEach((device) => {
+      if (
+        device.modularIO === "" ||
+        device.IOType === "" ||
+        device.sensorType === ""
+      ) {
+        alert("device properties can't empty");
+        return;
+      }
+    });
+
     const path = `users/${currentUserId}/devices`;
     const data = {
       id: Date.now(),
       name: deviceName,
-      macAddress: macAddress,
+      macAddress,
+      sendDataInterval,
+      properties: deviceProperties,
       position: { top: "", left: "" },
     };
+
     updateDataBase(path, [...oldDevices, data]).then(() => {
       setOpenDialog(!openDialog);
       setDeviceName("");
       setMacAddress("");
+      setDeviceProperties([{}]);
+      setSendDataInterval(0);
     });
   };
 
-  const handleAddProperTies = () => {
-    setDeviceProperties([...deviceProperTies, Date.now()]);
-  };
-
-  const handleDeleteProperties = (value) => {
-    if (deviceProperTies.length <= 1) return;
-    const newProperties = deviceProperTies.filter((data) => data !== value);
+  const handleDeleteProperties = (ID) => {
+    if (deviceProperties.length <= 1) return;
+    const newProperties = deviceProperties.filter((data) => data.ID !== ID);
     setDeviceProperties(newProperties);
     setOpenDeleteModal(false);
   };
@@ -138,7 +152,7 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
               send data interval :
             </Typography>
             <Slider
-              defaultValue={sendDataInterval}
+              defaultValue={0}
               aria-label="Default"
               valueLabelDisplay="auto"
               onChange={(e) => setSendDataInterval(e.target.value)}
@@ -146,7 +160,7 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
             <Typography>{sendDataInterval} minute</Typography>
           </Stack>
 
-          {deviceProperTies.map((data, index) => (
+          {deviceProperties.map((data, index) => (
             <div key={index}>
               <Modal
                 open={openDeleteModal}
@@ -176,7 +190,7 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        handleDeleteProperties(data);
+                        handleDeleteProperties(data.ID);
                       }}
                     >
                       delete
@@ -186,10 +200,12 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
               </Modal>
               <DevicePropertiesComponent
                 handleDelete={() => {
-                  if (deviceProperTies.length <= 1) return;
+                  if (deviceProperties.length <= 1) return;
                   setOpenDeleteModal(true);
                 }}
-                handleAddPoperties={() => handleAddProperTies(data)}
+                setDeviceProperties={setDeviceProperties}
+                deviceProperties={deviceProperties}
+                index={index}
               />
             </div>
           ))}
@@ -203,14 +219,35 @@ function FormNewDevice({ openDialog, setOpenDialog }) {
   );
 }
 
-const DevicePropertiesComponent = ({ handleDelete, handleAddPoperties }) => {
-  const [modularIO, setModularIO] = useState(null);
-  const [IOType, setIOType] = useState(null);
-  const [sensorType, setSensorType] = useState(null);
-
+const DevicePropertiesComponent = ({
+  handleDelete,
+  deviceProperties,
+  setDeviceProperties,
+  index,
+}) => {
   const [expandModularIO, setExpandModularIO] = useState(null);
   const [expandIOType, setExpandIOType] = useState(null);
   const [showExpendIcon, setShowExpandIcon] = useState(false);
+
+  const [modularIO, setModularIO] = useState("");
+  const [IOType, setIOType] = useState("");
+  const [sensorType, setSensorType] = useState("");
+
+  const newDeviceProperties = {
+    ID: Date.now(),
+    modularIO,
+    IOType,
+    sensorType,
+  };
+
+  const handleAddProperties = () => {
+    setDeviceProperties([...deviceProperties, newDeviceProperties]);
+  };
+
+  useEffect(() => {
+    deviceProperties[index] = newDeviceProperties;
+    setDeviceProperties(deviceProperties);
+  }, [modularIO, IOType, sensorType]);
 
   const handleChangeModularIO = (event) => {
     setModularIO(event.target.value);
@@ -242,8 +279,7 @@ const DevicePropertiesComponent = ({ handleDelete, handleAddPoperties }) => {
       }}
     >
       <Stack spacing={1} direction="row" alignItems="center">
-        <Typography sx={{ width: "80px" }}>Modular I/O </Typography>
-        <FormControl sx={{ minWidth: "280px" }}>
+        <FormControl fullWidth>
           <InputLabel id="demo-simple-select-label">modular type</InputLabel>
           <Select
             labelId="demo-simple-select-label"
@@ -275,7 +311,7 @@ const DevicePropertiesComponent = ({ handleDelete, handleAddPoperties }) => {
             )}
           </IconButton>
           <IconButton
-            onClick={handleAddPoperties}
+            onClick={handleAddProperties}
             sx={{ color: colors.blue[500] }}
           >
             <AddIcon />
@@ -288,8 +324,7 @@ const DevicePropertiesComponent = ({ handleDelete, handleAddPoperties }) => {
 
       {expandModularIO && (
         <Stack spacing={1} direction="row" mt={2} alignItems="center">
-          <Typography sx={{ width: "80px" }}>I/O Type :</Typography>
-          <FormControl sx={{ minWidth: "280px" }}>
+          <FormControl fullWidth>
             <InputLabel id="demo-simple-select-label">IO Type</InputLabel>
             <Select
               labelId="demo-simple-select-label"
@@ -307,8 +342,7 @@ const DevicePropertiesComponent = ({ handleDelete, handleAddPoperties }) => {
 
       {expandIOType && (
         <Stack spacing={1} direction="row" mt={2} alignItems="center">
-          <Typography sx={{ width: "80px" }}>Sensor Type</Typography>
-          <FormControl sx={{ minWidth: "280px" }}>
+          <FormControl fullWidth>
             <InputLabel id="demo-simple-select-label">sensor type</InputLabel>
             <Select
               labelId="demo-simple-select-label"

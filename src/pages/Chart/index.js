@@ -19,8 +19,9 @@ import {
 import { readDataBase, writeDataBase } from "./lib/functions/dataBaseCRUD";
 import { contvertStringToTimestamp } from "./lib/functions/convertStringToTimeStamp";
 import { useContextApi } from "../../lib/hooks/useContexApi";
-import ButtonExportLayout from "./components/ButtonExportChart";
 import EmptyChartAnimation from "./components/EmptyChartAnimation";
+
+import Menu from "@mui/material/Menu";
 
 export default function Chart() {
   const [selectLayoutIndex, setSelectLayoutIndex] = useState(0);
@@ -41,7 +42,18 @@ export default function Chart() {
 
   const printRef = useRef();
 
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleOpenMenuExport = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleCloseMenuExport = () => {
+    setAnchorEl(null);
+  };
+
   const getDataFromDataBase = () => {
+    if(!isDeviceExis) return 
     if (!layoutList[selectLayoutIndex]?.devices) return;
     const deviceRefrenceToDataBase = layoutList[selectLayoutIndex]?.devices.map(
       (data) => {
@@ -72,6 +84,8 @@ export default function Chart() {
   };
 
   const queryDataByDateTime = () => {
+    if(!isDeviceExis) return 
+
     const newData = [...allChartData];
     const timeStart = contvertStringToTimestamp(startDateTime);
     const timeEnd = contvertStringToTimestamp(endDateTime);
@@ -99,6 +113,7 @@ export default function Chart() {
   };
 
   const handleSelectDeviceProperties = (event) => {
+
     if (event.target.value.slice(0, 7) === "@device") {
       const newChartData = allChartData.filter(
         (data) => data.deviceName === event.target.value.slice(8)
@@ -127,6 +142,58 @@ export default function Chart() {
     });
   };
 
+  const downloadData = (type) => {
+    if(!isDeviceExis) return 
+  
+    const titles = allChartData.map((item) => item.sensorName);
+    const data = allChartData.map((item) => item.log);
+    let listData = [];
+
+    for (let i = 0; i < titles.length; i++) {
+      const sensorValue = [];
+      for (let j = 0; j < data[0].length; j++) {
+        sensorValue.push(data[i][j][titles[i]]);
+      }
+      listData.push(sensorValue);
+    }
+
+    // transform matrix of array
+
+    const transform = [];
+    for (let i = 0; i < listData[0].length; i++) {
+      const row = [];
+      for (let j = 0; j < listData.length; j++) {
+        row.push(listData[j][i]);
+      }
+      transform.push(row);
+    }
+
+    listData = transform;
+    listData.unshift(titles);
+
+    const element = document.createElement("a");
+
+    const file = new Blob([...listData.join("\n")], {
+      type: type,
+    });
+    element.href = URL.createObjectURL(file);
+    let fileExtention = "";
+    switch (type) {
+      case "txt":
+        fileExtention = "data.txt";
+        break;
+      case "csv":
+        fileExtention = "data.csv";
+        break;
+      default:
+        fileExtention = "data.xlsx";
+        break;
+    }
+    element.download = fileExtention;
+    document.body.appendChild(element);
+    element.click();
+  };
+
   return (
     <Box
       sx={{
@@ -136,106 +203,145 @@ export default function Chart() {
         paddingTop: "1px",
       }}
     >
-      {isDeviceExis ? (
-        <>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack
-              direction="row"
-              spacing={2}
-              flexWrap="wrap"
-              sx={{
-                minHeight: "80px",
-                backgroundColor: changeThem ? "#001e3c" : "#FFF",
-                margin: "20px",
-                alignItems: "center",
-                padding: "10px",
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          flexWrap="wrap"
+          sx={{
+            minHeight: "80px",
+            backgroundColor: changeThem ? "#001e3c" : "#FFF",
+            margin: "20px",
+            alignItems: "center",
+            padding: { xs: "5px", sm: "10px" },
+          }}
+        >
+          <FormControl sx={{ minWidth: { xs: 240, sm: 100 } }}>
+            <Select
+              value={selectLayoutIndex}
+              onChange={handleSelectLayout}
+              sx={{ height: "30px" }}
+              displayEmpty
+              inputProps={{ "aria-label": "Without label" }}
+            >
+              {layoutList.map((layout, index) => (
+                <MenuItem key={index} value={index}>
+                  {layout.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: { xs: 240, sm: 100 } }}>
+            <Select
+              value={selectdeviceProperties}
+              onChange={handleSelectDeviceProperties}
+              sx={{ height: "30px" }}
+              displayEmpty
+              inputProps={{ "aria-label": "Without label" }}
+            >
+              {isDeviceExis &&
+                layoutList[selectLayoutIndex]?.devices.map((device, index) => (
+                  <MenuItem key={index} value={`@device_${device.name}`}>
+                    {device.name}
+                  </MenuItem>
+                ))}
+              {allSensorName.map((data, index) => (
+                <MenuItem key={index} value={`@sensor_${data}`}>
+                  All {data}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <DateTimePicker
+            label="Start"
+            value={startDateTime}
+            onChange={handleStartSelectDateTime}
+            renderInput={(params) => <TextField {...params} displayEmpty />}
+          />
+          <DateTimePicker
+            label="End"
+            value={endDateTime}
+            onChange={handleEndSelectDateTime}
+            renderInput={(params) => <TextField {...params} displayEmpty />}
+          />
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Button onClick={queryDataByDateTime} variant="outlined">
+              Search
+            </Button>
+            <Button onClick={handleOpenMenuExport} variant="outlined">
+              Export
+            </Button>
+          </Stack>
+          <Menu
+            id="basic-menu"
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleCloseMenuExport}
+            MenuListProps={{
+              "aria-labelledby": "basic-button",
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                downloadData("csv");
+                handleCloseMenuExport();
               }}
             >
-              <FormControl sx={{ minWidth: 100 }}>
-                <Select
-                  value={selectLayoutIndex}
-                  onChange={handleSelectLayout}
-                  sx={{ height: "30px" }}
-                  displayEmpty
-                  inputProps={{ "aria-label": "Without label" }}
-                >
-                  {layoutList.map((layout, index) => (
-                    <MenuItem key={index} value={index}>
-                      {layout.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl sx={{ minWidth: 100 }}>
-                <Select
-                  value={selectdeviceProperties}
-                  onChange={handleSelectDeviceProperties}
-                  sx={{ height: "30px" }}
-                  displayEmpty
-                  inputProps={{ "aria-label": "Without label" }}
-                >
-                  {layoutList[selectLayoutIndex]?.devices.map(
-                    (device, index) => (
-                      <MenuItem key={index} value={`@device_${device.name}`}>
-                        {device.name}
-                      </MenuItem>
-                    )
-                  )}
-                  {allSensorName.map((data, index) => (
-                    <MenuItem key={index} value={`@sensor_${data}`}>
-                      All {data}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <DateTimePicker
-                label="Start"
-                value={startDateTime}
-                onChange={handleStartSelectDateTime}
-                renderInput={(params) => <TextField {...params} displayEmpty />}
-              />
-              <DateTimePicker
-                label="End"
-                value={endDateTime}
-                onChange={handleEndSelectDateTime}
-                renderInput={(params) => <TextField {...params} displayEmpty />}
-              />
-              <Button onClick={queryDataByDateTime} variant="outlined">
-                Search
-              </Button>
-              <ButtonExportLayout componentRef={printRef}>
-                Export
-              </ButtonExportLayout>
-            </Stack>
-          </LocalizationProvider>
-
-          {/* <Button onClick={saveData}>Save</Button> */}
-          <Grid container spacing={1} p={5} component="div" ref={printRef}>
-            {isDeviceExis &&
-              chartData.map((value, index) => {
-                return showAllSensors ? (
-                  <Grid item xs={12} md={6} key={index}>
-                    <CardChart
-                      data={value.log}
-                      title={value.deviceName}
-                      sensorName={value.sensorName}
-                      isShowAllSensors={showAllSensors}
-                    />
-                  </Grid>
-                ) : (
-                  <Grid item sm={12} md={12} key={index}>
-                    <CardChart
-                      data={value.log}
-                      title={value.deviceName}
-                      sensorName={value.sensorName}
-                      isShowAllSensors={showAllSensors}
-                    />
-                  </Grid>
+              export as csv
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                downloadData("txt");
+                handleCloseMenuExport();
+              }}
+            >
+              export as txt
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                downloadData(
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 );
-              })}
-          </Grid>
-        </>
+                handleCloseMenuExport();
+              }}
+            >
+              export as xlsx
+            </MenuItem>
+          </Menu>
+        </Stack>
+      </LocalizationProvider>
+      {isDeviceExis ? (
+        <Grid
+          container
+          spacing={1}
+          p={{ xs: 1, sm: 5 }}
+          component="div"
+          ref={printRef}
+        >
+          {isDeviceExis &&
+            chartData.map((value, index) => {
+              return showAllSensors ? (
+                <Grid item xs={12} md={6} key={index}>
+                  <CardChart
+                    data={value.log}
+                    title={value.deviceName}
+                    sensorName={value.sensorName}
+                    isShowAllSensors={showAllSensors}
+                  />
+                </Grid>
+              ) : (
+                <Grid item sm={12} md={12} key={index}>
+                  <CardChart
+                    data={value.log}
+                    title={value.deviceName}
+                    sensorName={value.sensorName}
+                    isShowAllSensors={showAllSensors}
+                  />
+                </Grid>
+              );
+            })}
+        </Grid>
       ) : (
         <EmptyChartAnimation />
       )}

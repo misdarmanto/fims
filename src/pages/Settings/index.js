@@ -1,18 +1,43 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { styled } from "@mui/material/styles";
 import { useContextApi } from "../../lib/hooks/useContexApi";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 
-import { Card, colors } from "@mui/material";
+import { colors } from "@mui/material";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 
+import ListSubheader from "@mui/material/ListSubheader";
+import Collapse from "@mui/material/Collapse";
+import ColorLensIcon from "@mui/icons-material/ColorLens";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+
+import DevicesRoundedIcon from "@mui/icons-material/DevicesRounded";
+import AccountBoxIcon from "@mui/icons-material/AccountBox";
+import KeyIcon from "@mui/icons-material/Key";
+import ManageAccountsSharpIcon from "@mui/icons-material/ManageAccountsSharp";
+import CallSharpIcon from "@mui/icons-material/CallSharp";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+
+import {
+  Button,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from "@mui/material";
+import { updateDataBase } from "../../lib/function/dataBaseCRUD";
+import { useSelector } from "react-redux";
+import DeviceProperties from "./components/DeviceProperties";
+
 const MaterialUISwitch = styled(Switch)(({ theme }) => ({
-  width: 62,
-  height: 34,
+  width: 55,
+  height: 27,
   padding: 7,
   "& .MuiSwitch-switchBase": {
     margin: 1,
@@ -34,8 +59,8 @@ const MaterialUISwitch = styled(Switch)(({ theme }) => ({
   },
   "& .MuiSwitch-thumb": {
     backgroundColor: theme.palette.mode === "dark" ? "#003892" : "#001e3c",
-    width: 32,
-    height: 32,
+    width: 25,
+    height: 25,
     "&:before": {
       content: "''",
       position: "absolute",
@@ -57,13 +82,71 @@ const MaterialUISwitch = styled(Switch)(({ theme }) => ({
   },
 }));
 
+const CardContainer = styled("div")(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    width: "285px",
+  },
+  [theme.breakpoints.up("sm")]: {
+    width: "450px",
+  },
+  [theme.breakpoints.up("sm")]: {
+    minWidth: "600px",
+  },
+}));
+
 const Settings = () => {
-  const { changeThem, setChangeThem } = useContextApi();
+  const { currentUserId, changeThem, setChangeThem } = useContextApi();
+  const { user } = useSelector((state) => state.user);
+  const { allDevice } = useSelector((state) => state.devices);
+
+  const [openThemSetting, setOpenThemSetting] = useState(false);
+  const [openDeviceSetting, setOpenDeviceSetting] = useState(false);
+  const [openProfileSetting, setOpenProfileSetting] = useState(false);
+  const [newUserName, setNewUserName] = useState(user?.userName);
+
+  const [openDialogUserName, setOpenDialogUserName] = useState(false);
+  const [openDialogResetPassword, setOpenDialogResetPassword] = useState(false);
+
+  const handleOpenThemSettings = () => {
+    setOpenThemSetting(!openThemSetting);
+  };
+
+  const handleOpenDeviceSettings = () => {
+    setOpenDeviceSetting(!openDeviceSetting);
+  };
+
+  const handleOpenProfileSettings = () => {
+    setOpenProfileSetting(!openProfileSetting);
+  };
 
   const handleChangeThem = () => {
     setChangeThem((them) => !them);
-    console.log(changeThem);
     localStorage.setItem("THEM", `${!changeThem}`);
+  };
+
+  const handleUpdate = () => {
+    updateDataBase("users/" + currentUserId + "/userName", newUserName);
+  };
+
+  const handleDialogChangeUserName = () => {
+    setOpenDialogUserName(!openDialogUserName);
+  };
+
+  const handleDialogResetPassword = () => {
+    setOpenDialogResetPassword(!openDialogResetPassword);
+  };
+
+  const handleResetPassword = () => {
+    const auth = getAuth();
+    sendPasswordResetEmail(auth, user?.email)
+      .then(() => {
+        alert(`email has been sent to ${user?.email}`);
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // ..
+      });
   };
 
   return (
@@ -76,29 +159,157 @@ const Settings = () => {
         justifyContent: "center",
       }}
     >
-      <Card
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          minWidth: "400px",
-          height: "300px",
-        }}
-      >
-        <h1 style={{ textAlign: "center" }}>Settings</h1>
-        <List>
-          <ListItemButton>
+      <CardContainer>
+        <List
+          sx={{ width: "100%", bgcolor: "background.paper" }}
+          component="nav"
+          aria-labelledby="nested-list-subheader"
+          subheader={
+            <ListSubheader component="div" id="nested-list-subheader">
+              <h1 style={{ textAlign: "center" }}>Settings</h1>
+            </ListSubheader>
+          }
+        >
+          {/* them setting */}
+
+          <ListItemButton onClick={handleOpenThemSettings}>
             <ListItemIcon>
-              <FormControlLabel
-                onChange={handleChangeThem}
-                control={
-                  <MaterialUISwitch sx={{ m: 1 }} checked={changeThem} />
-                }
-              />
+              <ColorLensIcon />
             </ListItemIcon>
-            <ListItemText primary={changeThem ? "Light" : "Dark"} />
+            <ListItemText primary="Them" />
+            {openThemSetting ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
+          <Collapse in={openThemSetting} timeout="auto" unmountOnExit>
+            <List component="div">
+              <ListItemButton sx={{ pl: 5 }}>
+                <ListItemIcon>
+                  <FormControlLabel
+                    onChange={handleChangeThem}
+                    control={<MaterialUISwitch checked={changeThem} />}
+                  />
+                </ListItemIcon>
+                <ListItemText primary={changeThem ? "Light" : "Dark"} />
+              </ListItemButton>
+            </List>
+          </Collapse>
+
+          {/* device settings */}
+
+          <ListItemButton onClick={handleOpenDeviceSettings}>
+            <ListItemIcon>
+              <DevicesRoundedIcon />
+            </ListItemIcon>
+            <ListItemText primary="Devices" />
+            {openDeviceSetting ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+          <Collapse in={openDeviceSetting} timeout="auto" unmountOnExit>
+            <List component="div">
+              {allDevice.map((data, index) => (
+                <DeviceProperties data={data} key={index} />
+              ))}
+            </List>
+          </Collapse>
+
+          {/* profile setting */}
+
+          <ListItemButton onClick={handleOpenProfileSettings}>
+            <ListItemIcon>
+              <AccountBoxIcon />
+            </ListItemIcon>
+            <ListItemText primary="Profile" />
+            {openProfileSetting ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+          <Collapse in={openProfileSetting} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItemButton
+                sx={{ pl: 5 }}
+                onClick={handleDialogResetPassword}
+              >
+                <ListItemIcon>
+                  <KeyIcon />
+                </ListItemIcon>
+                <ListItemText>Reset Password</ListItemText>
+              </ListItemButton>
+              <ListItemButton
+                sx={{ pl: 5 }}
+                onClick={handleDialogChangeUserName}
+              >
+                <ListItemIcon>
+                  <ManageAccountsSharpIcon />
+                </ListItemIcon>
+                <ListItemText>Change User Name</ListItemText>
+              </ListItemButton>
+              <ListItemButton sx={{ pl: 5 }}>
+                <ListItemIcon>
+                  <CallSharpIcon />
+                </ListItemIcon>
+                <ListItemText>Change Phone Number</ListItemText>
+              </ListItemButton>
+            </List>
+          </Collapse>
         </List>
-      </Card>
+      </CardContainer>
+
+      {/* dialog reset password */}
+
+      <Dialog
+        open={openDialogResetPassword}
+        onClose={handleDialogResetPassword}
+      >
+        <DialogTitle>Reset Password</DialogTitle>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              handleDialogResetPassword();
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              handleResetPassword();
+              handleDialogResetPassword();
+            }}
+          >
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* dialog change user name */}
+      <Dialog open={openDialogUserName} onClose={handleDialogChangeUserName}>
+        <DialogTitle>Edite Profile</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="name"
+            label="user name"
+            type="email"
+            fullWidth
+            variant="standard"
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              handleDialogChangeUserName();
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              handleDialogChangeUserName();
+              handleUpdate();
+            }}
+          >
+            Change
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

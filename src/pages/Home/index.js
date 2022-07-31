@@ -1,7 +1,6 @@
 import React, { useState, useRef, createRef, useEffect } from "react";
 import {
   Alert,
-  Grid,
   Box,
   FormControl,
   IconButton,
@@ -35,7 +34,6 @@ import { PencilDraw } from "./Components/Drawer/PencilDraw";
 import DrawRectangle from "./Components/Drawer/DrawRectangle";
 import ImgPicker from "./Components/ImagePicker";
 import InsertPhotoIcon from "@mui/icons-material/InsertPhoto";
-import { addTextNode } from "./Components/Drawer/addTextNode";
 import TextFieldsIcon from "@mui/icons-material/TextFields";
 import { selectedShape } from "../../redux/features/drawSlice";
 import DeviceWrapper from "./Components/DeviceWrapper";
@@ -47,8 +45,9 @@ import Select from "@mui/material/Select";
 import { setIndexLayout } from "../../redux/features/layoutSlice";
 import TextDraw from "./Components/Drawer/TextDraw";
 
-import useMediaQuery from "@mui/material/useMediaQuery";
 import EmptyLayoutAnimation from "./Components/EmptyLayoutAnimation";
+
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 const Home = () => {
   const {
@@ -69,7 +68,9 @@ const Home = () => {
   const { shapesSelected } = useSelector((state) => state.drawer);
   const { userId } = useSelector((state) => state.user);
 
-  const isSmallScreen = useMediaQuery((theme) => theme.breakpoints.up("sm"));
+  const isSmallBreakPoint = useMediaQuery((theme) =>
+    theme.breakpoints.down("sm")
+  );
 
   const printComponentRef = useRef(null);
   const dispatch = useDispatch();
@@ -81,7 +82,8 @@ const Home = () => {
 
   const [undoShapes, setUndoShapes] = useState([]);
   const [redoShapes, setRedoShapes] = useState([]);
-  const [deleteShapeId, setDeleteShapId] = useState(null);
+
+  const [selectShapeDelete, setSelectShapeDelete] = useState({});
 
   const stageEl = createRef();
   const layerEl = createRef();
@@ -99,7 +101,7 @@ const Home = () => {
       () => {
         const generateId = Date.now() + "";
         const imageProperties = {
-          content: reader.result,
+          content: reader.shapesSelected,
           id: generateId,
           name: "image",
         };
@@ -333,25 +335,38 @@ const Home = () => {
   };
 
   // delete shape on key press
+
   useEffect(() => {
     const handleDeleteShape = (e) => {
       if (e.key === "Backspace") {
-        const result = JSON.parse(localStorage.getItem("@shape_key"));
-        if (result === null) return;
-        switch (result.name) {
+        const deletedShape = JSON.parse(localStorage.getItem("DELETE-SHAPE"));
+        switch (deletedShape.name) {
           case "rectangle":
-            const newRectangle = rectangles.filter((rect) => {
-              return parseInt(rect.id) !== parseInt(result.id);
-            });
-            if (newRectangle.length !== 0) {
-              setRectangles(newRectangle);
-            }
+            const indexOfRectangles = rectangles.map((rect) => rect.id);
+            const indexOfRectangleTarget = indexOfRectangles.indexOf(
+              deletedShape.id
+            );
+            const newRectangles = [...rectangles];
+            newRectangles.splice(indexOfRectangleTarget, 0);
+            setRectangles(newRectangles);
+
+            // const newRectangle = rectangles.filter((rect) => {
+            //   return rect.id !== deletedShape.id;
+            // });
+            // if (newRectangle.length !== 0) {
+            //   setRectangles(newRectangle);
+            // }
             break;
           case "circle":
-            const newCircle = circles.filter((circle) => {
-              return parseInt(circle.id) !== parseInt(result.id);
-            });
+            const indexOfCircle = circles.map((circle) => circle.id);
+            const indexOfCircleTarget = indexOfCircle.indexOf(deletedShape.id);
+            const newCircle = [...circles];
+            newCircle.splice(indexOfCircleTarget, 0);
             setCircles(newCircle);
+            // const newCircle = circles.filter((circle) => {
+            //   return circle.id !== deletedShape.id;
+            // });
+            // setCircles(newCircle);
             break;
           default:
             break;
@@ -397,7 +412,7 @@ const Home = () => {
         sx={{
           border: changeThem ? "none" : "1px solid #e3e3e3",
           padding: "2px",
-          minWidth: { xs: "400px", sm: "500px" },
+          width: { xs: "280px", sm: "600px" },
           maxWidth: "600px",
         }}
       >
@@ -406,6 +421,7 @@ const Home = () => {
         </IconButton>
         <FormControl>
           <Select
+            value={""}
             onChange={handleSelectDropDownShape}
             sx={{ height: "30px" }}
             displayEmpty
@@ -435,6 +451,7 @@ const Home = () => {
 
         <FormControl>
           <Select
+            value={""}
             onChange={handleSelectLineDropDown}
             sx={{ height: "30px", ml: 1 }}
             displayEmpty
@@ -509,7 +526,7 @@ const Home = () => {
         ref={fileUploadEl}
         onChange={addImage}
       />
-      
+
       {/* content */}
       <div ref={printComponentRef}>
         {layoutList.length === 0 && <EmptyLayoutAnimation />}
@@ -536,7 +553,7 @@ const Home = () => {
                       isSelected={text.id === shapesSelected?.id}
                       onSelect={() => {
                         handleSelecShape(text);
-                        setDeleteShapId(text.id);
+                        setSelectShapeDelete(text);
                       }}
                       onChange={(newAttrs) => {
                         const texts = textDraw.slice();
@@ -555,9 +572,8 @@ const Home = () => {
                       isSelected={rect.id === shapesSelected?.id}
                       onSelect={() => {
                         handleSelecShape(rect);
-                        setDeleteShapId(rect.id);
                         localStorage.setItem(
-                          "@shape_key",
+                          "DELETE-SHAPE",
                           JSON.stringify(rect)
                         );
                       }}
@@ -578,10 +594,7 @@ const Home = () => {
                       isSelected={circle.id === shapesSelected?.id}
                       onSelect={() => {
                         handleSelecShape(circle);
-                        localStorage.setItem(
-                          "@shape_key",
-                          JSON.stringify(circle)
-                        );
+                        setSelectShapeDelete(circle);
                       }}
                       onChange={(newAttrs) => {
                         const circs = circles.slice();
@@ -599,6 +612,7 @@ const Home = () => {
                       isSelected={image.id === shapesSelected?.id}
                       onSelect={() => {
                         handleSelecShape(image);
+                        setSelectShapeDelete(image);
                       }}
                       onChange={(newAttrs) => {
                         const imgs = images.slice();

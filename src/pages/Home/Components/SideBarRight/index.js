@@ -86,14 +86,20 @@ const SideBarRight = ({ printComponentRef }) => {
   return (
     <>
       <Drawer variant="permanent" open={openDrawer} anchor="right">
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <IconButton onClick={handleOpenDrawer}>
-            {openDrawer ? (
-              <CloseSharpIcon />
-            ) : (
-              <ChevronRightIcon fontSize="large" />
-            )}
+        {!openDrawer && (
+          <IconButton
+            onClick={handleOpenDrawer}
+            style={{ position: "absolute", left: 0, bottom: "50%", zIndex: 2 }}
+          >
+            <ChevronLeftIcon fontSize="large" />
           </IconButton>
+        )}
+        <Stack direction="row" alignItems="center" spacing={3}>
+          {openDrawer && (
+            <IconButton onClick={handleOpenDrawer}>
+              <CloseSharpIcon />
+            </IconButton>
+          )}
           {openDrawer && (
             <Tabs value={tab} onChange={handleSelectTab} centered>
               <Tab label="Design" />

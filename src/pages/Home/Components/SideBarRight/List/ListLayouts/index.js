@@ -8,7 +8,7 @@ import Collapse from "@mui/material/Collapse";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { useSelector, useDispatch } from "react-redux";
-import { IconButton, ListItem, Stack } from "@mui/material";
+import { Button, IconButton, ListItem, Stack } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Menu from "@mui/material/Menu";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -18,27 +18,27 @@ import { addDeviceDelete } from "../../../../../../redux/features/deviceSlice";
 import { setIndexLayout } from "../../../../../../redux/features/layoutSlice";
 import { updateDataBase } from "../../../../../../lib/function/dataBaseCRUD";
 
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+
 const ListLayouts = ({ open, onOpen }) => {
   const { layoutList } = useSelector((state) => state.layouts);
   const { userId } = useSelector((state) => state.user);
   const [selectIndexLayout, setSelectIndexLayout] = useState(0);
   const dispatch = useDispatch();
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const openMenu = Boolean(anchorEl);
-
-  const handleOpenMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setAnchorEl(null);
-  };
-
+  const [openPopUp, setOpenPopUp] = useState(false);
+  
   const handleOnClick = (index) => {
     dispatch(setIndexLayout(index));
     setSelectIndexLayout(index);
-    dispatch(addDeviceDelete(null));
+  };
+
+  const handlePopUp = () => {
+    setOpenPopUp(!openPopUp);
   };
 
   const handleDeletLayout = () => {
@@ -47,7 +47,6 @@ const ListLayouts = ({ open, onOpen }) => {
     );
     const path = `users/${userId}/layouts/`;
     updateDataBase(path, newLayouts);
-    handleCloseMenu();
     dispatch(setIndexLayout(0));
   };
 
@@ -69,7 +68,7 @@ const ListLayouts = ({ open, onOpen }) => {
                   <IconButton
                     sx={{ mr: 2 }}
                     onClick={(e) => {
-                      handleOpenMenu(e);
+                      handlePopUp();
                       handleOnClick(index);
                     }}
                   >
@@ -79,31 +78,37 @@ const ListLayouts = ({ open, onOpen }) => {
                     listData={data}
                     onClick={() => handleOnClick(index)}
                   />
-                  <Menu
-                    id="basic-menu"
-                    anchorEl={anchorEl}
-                    open={openMenu}
-                    onClose={handleCloseMenu}
-                    MenuListProps={{
-                      "aria-labelledby": "basic-button",
-                    }}
+
+                  <Dialog
+                    open={openPopUp}
+                    onClose={handlePopUp}
+                    aria-labelledby="alert-dialog-title"
+                    aria-describedby="alert-dialog-description"
                   >
-                    <List>
-                      <ListItemButton onClick={handleDeletLayout}>
-                        <ListItemIcon>
-                          <DeleteIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={`delete ${layoutList[selectIndexLayout]?.name}`}
-                        />
-                      </ListItemButton>
-                    </List>
-                  </Menu>
+                    <DialogTitle id="alert-dialog-title"></DialogTitle>
+                    <DialogContent>
+                      <DialogContentText id="alert-dialog-description">
+                        {`delete ${layoutList[selectIndexLayout]?.name}`}
+                      </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                      <Button onClick={handlePopUp}>cancel</Button>
+                      <Button
+                        onClick={() => {
+                          handleDeletLayout();
+                          setOpenPopUp(!openPopUp);
+                        }}
+                        autoFocus
+                      >
+                        ok
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
                 </Stack>
               </ListItem>
             ))
           ) : (
-            <ListNoResult title="belum ada layout" />
+            <ListNoResult title="empty" />
           )}
         </List>
       </Collapse>

@@ -1,47 +1,23 @@
-import React, { useState } from "react";
-import {
-  Grid,
-  Card,
-  Container,
-  List,
-  Button,
-  TextField,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  colors,
-} from "@mui/material";
+import React from "react";
+import { Card, List, colors } from "@mui/material";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import EmailIcon from "@mui/icons-material/Email";
-import SettingsIcon from "@mui/icons-material/Settings";
 import { useContextApi } from "../../lib/hooks/useContexApi";
-import { updateDataBase } from "../../lib/function/dataBaseCRUD";
 import { useSelector } from "react-redux";
+import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 
 const MyProfile = () => {
-  const { currentUserId, changeThem } = useContextApi();
-  const [openDialog, setOpenDialog] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
+  const { changeThem } = useContextApi();
   const { user } = useSelector((state) => state.user);
-
-  const handleDialog = () => {
-    setOpenDialog(!openDialog);
-  };
-
-  const handleUpdate = () => {
-    updateDataBase("users/" + currentUserId + "/userName", newUserName);
-  };
-
   return (
     <div
       style={{
         paddingTop: "50px",
-        minHeight: window.innerHeight,
-        backgroundColor: changeThem ?  "#0a1929" : colors.grey[100],
+        minHeight: "100vh",
+        backgroundColor: changeThem ? "#0a1929" : colors.grey[100],
         display: "flex",
         justifyContent: "center",
       }}
@@ -50,7 +26,7 @@ const MyProfile = () => {
         sx={{
           display: "flex",
           flexDirection: "column",
-          minWidth: "500px",
+          width: {xs: "285px", sm: "400px", md:"500px"},
           height: "300px",
         }}
       >
@@ -68,42 +44,14 @@ const MyProfile = () => {
             </ListItemIcon>
             <ListItemText primary={user?.email} />
           </ListItemButton>
-          <ListItemButton onClick={handleDialog}>
+          <ListItemButton>
             <ListItemIcon>
-              <SettingsIcon />
+              <LocalPhoneIcon />
             </ListItemIcon>
-            <ListItemText primary="Edite  Profile" />
+            <ListItemText primary="+62813-1678-3223" />
           </ListItemButton>
         </List>
       </Card>
-
-      <Dialog open={openDialog} onClose={handleDialog}>
-        <DialogTitle>Edite Profile</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="name"
-            label="new user name"
-            type="email"
-            fullWidth
-            variant="standard"
-            value={newUserName}
-            onChange={(e) => setNewUserName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              handleDialog();
-              handleUpdate();
-              setNewUserName("");
-            }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };

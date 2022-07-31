@@ -35,7 +35,6 @@ import { blue } from "@mui/material/colors";
 function App() {
   const [isAuth, setIsAuth] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
-  const [icons, setIcons] = useState([]);
   const [isDataAvaliable, setIsDataAvaliable] = useState(false);
   const [dropDevice, setDropDevice] = useState([]);
   const [isDisplayAlert, setIsDisplayAlert] = useState({
@@ -48,6 +47,12 @@ function App() {
   const [images, setImages] = useState([]);
   const [textDraw, setTextDraw] = useState([]);
   const [zoomSquare, setZoomSquare] = useState(1);
+
+  const [deviceInGroups, setDeviceInGroups] = useState([]);
+
+  const [deviceAlreadyUsedInLayout, setDeviceAlreadyUsedInLayout] = useState(
+    []
+  );
 
   const them = JSON.parse(localStorage.getItem("THEM"));
   const [changeThem, setChangeThem] = useState(them);
@@ -68,7 +73,6 @@ function App() {
       if (user?.emailVerified) {
         const path = "users/" + stringRegex(user.email);
         readDataBase(path, getDataFromDataBase);
-        readDataBase("icons/", setIcons);
         readDataBase("devices/", (data) => {
           dispatch(insertPublicDevice(data));
         });
@@ -88,6 +92,17 @@ function App() {
     },
   });
 
+  // useEffect(() => {
+  //   const path = `users/${currentUserId}/groupDevices`;
+  //   readDataBase(path, (result) => {
+  //     const devices = [];
+  //     result
+  //       .map((value) => value.devices)
+  //       .forEach((data) => data !== undefined && devices.push(...data));
+  //     setDeviceInGroups(devices);
+  //   });
+  // }, []);
+
   if (!isDataAvaliable) {
     return <LoadingPage />;
   }
@@ -99,7 +114,6 @@ function App() {
           isAuth,
           setIsAuth,
           currentUserId,
-          icons,
           isDisplayAlert,
           setIsDisplayAlert,
           dropDevice,
@@ -116,6 +130,10 @@ function App() {
           setZoomSquare,
           changeThem,
           setChangeThem,
+          deviceInGroups,
+          setDeviceInGroups,
+          deviceAlreadyUsedInLayout,
+          setDeviceAlreadyUsedInLayout,
         }}
       >
         <DndProvider backend={HTML5Backend}>
